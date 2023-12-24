@@ -14,6 +14,8 @@ Kubernetes 入門
 ### 設定 Context(叢集)
 >  cluster 是以 context 為單位，一個 context 有三個元件，分別是 User、Server、Certification  
 >  通常會在 $HOME/.kube/config  
+![截圖 2023-12-25 上午12.05.01](https://hackmd.io/_uploads/H1U6LCrPa.png)
+
 >  也可以用環境變數 KUBECONFIG 方式設定
 ```gherkin=
 export KUBECONFIG=/tmp/admin.conf
@@ -22,7 +24,7 @@ export KUBECONFIG=/tmp/admin.conf
 ```gherkin=
 kubectl config get-contexts 
 ```
-![截圖 2023-12-24 下午8.26.37](https://hackmd.io/_uploads/SkaY7iSwT.png)
+![截圖 2023-12-25 上午12.03.09](https://hackmd.io/_uploads/SyfDLRHPT.png)
 
 ### 切換 context 
 ```gherkin=
@@ -96,11 +98,15 @@ spec:
 ```gherkin=
 kubectl describe po nginx
 ```
+![截圖 2023-12-25 上午12.08.36](https://hackmd.io/_uploads/HJHqw0SPp.png)
+
 ### 取得 pod 的日誌
 > 目前的日誌
 ```gherkin=
 kubectl logs nginx
 ```
+![截圖 2023-12-25 上午12.06.59](https://hackmd.io/_uploads/H1n4w0HPT.png)
+
 > 損毀前或重啟前的日誌
 ```gherkin=
 kubectl logs nginx -p
