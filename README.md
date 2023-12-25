@@ -520,6 +520,23 @@ k exec pod/nginx -it -- cat /etc/foo/username
 admin
 ```
 ## Storage
+```gherkin=
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pd
+spec:
+  containers:
+  - image: registry.k8s.io/test-webserver
+    name: test-container
+    volumeMounts:
+    - mountPath: /cache
+      name: cache-volume
+  volumes:
+  - name: cache-volume
+    emptyDir:
+      sizeLimit: 500Mi
+```
 ### PV
 
 ### PVC
