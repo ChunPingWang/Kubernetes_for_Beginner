@@ -10,6 +10,28 @@ Kubernetes 入門
 
 [TOC]
 
+## 準備
+### Kind
+> 
+```gherkin=
+kind create cluster --config multi-nodes.yaml
+```
+> kind/multi-nodes.yaml
+```gherkin
+# three node (two workers) cluster config
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+- role: worker
+- role: worker
+```
+![截圖 2024-01-06 上午12.16.05](https://hackmd.io/_uploads/HkP73oBdp.png)
+> 登入 control-plane
+```gherkin=
+docker exec -it kind-control-plane  /bin/bash
+```
+
 ## 基礎
 ### 設定 Context(叢集)
 >  cluster 是以 context 為單位，一個 context 有三個元件，分別是 User、Server、Certification  
