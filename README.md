@@ -159,11 +159,38 @@ kubectl exec -it busybox -c busybox -- ls
 
 ```
 ## Workload Resource
-### ReplicaSet
-
 ### Deployment
-
-
+> 透過指領產生 yaml 檔，不直接部署
+```gherkin=
+kubectl create deploy nginx --image=nginx --dry-run=client -o yaml
+```
+> yaml 檔內容如下
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        resources: {}
+status: {}
+```
 
 ## Service
 > 在此僅列出常用型態
@@ -335,27 +362,58 @@ ns2-nginx.ns1.svc.cluster.local	canonical name = ns2-nginx.ns2.svc.cluster.local
 Name:	ns2-nginx.ns2.svc.cluster.local
 Address: 10.110.109.186
 ```
-### NodePort(少用)
 
+## Volume
+### ConfigMap
 
-## ConfigMap
-
-### 有兩種產生方法
-> 可用於應用程式所需的參數設定
-> create 1. --from-file 
+#### 兩種產生方法(可用於應用程式所需的參數設定)
+> 從檔案讀取後寫入 --from-file 
 ```gherkin=
 #先把參數寫入一個檔 
 echo -e "var1=val1\nvar2=val2" > configMapFile.txt
 
-kubectl create cm mycmfile --from-file=configMapFile.xtx
+kubectl create cm mycmfile --from-file=configMapFile.txt
 ```
-> create config map 2 --from-literval
 ```gherkin=
-kubectl create cm mycmliterval --from-literval=var1=val1 --from-literval=var2=val2
+kubectl get configmap mycmfile -o yaml
+```
+```
+apiVersion: v1
+data:
+  configMapFile.txt: |
+    var1=val1
+    var2=val2
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2024-01-04T01:50:49Z"
+  name: mycmfile
+  namespace: default
+  resourceVersion: "74218"
+  uid: 33f56c3c-8ec0-4d84-b3b1-f275ac082a49
+```
+> 從參數寫入 --from-literval
+```gherkin=
+kubectl create cm mycmliteral --from-literal=var1=val1 --from-literal=var2=val2
+```
+```gherkin=
+kubectl get configMap mycmliteral -o yaml
+```
+```
+apiVersion: v1
+data:
+  var1: val1
+  var2: val2
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2024-01-04T15:31:14Z"
+  name: mycmliteral
+  namespace: default
+  resourceVersion: "98321"
+  uid: 68614916-f194-49ad-9c58-f4b0ede4f6d7
 ```
 
-### 有三種使用方法
-> env
+#### 有三種使用方法
+> env(volume/configMap/pod-env.yaml)
 ```gherkin=
 apiVersion: v1
 kind: Pod
@@ -371,20 +429,42 @@ spec:
     name: nginx
     resources: {}
     env:
-    - name: mycmliterval # pod 裡面的變數名稱
+    - name: value # pod 裡面的變數名稱
       valueFrom:
         configMapKeyRef:
-          name: mycmliterval # config map 名稱
-          key: va1 # config map 裡的變數名稱
+          name: mycmliteral # config map 名稱
+          key: var1 # config map 裡的變數名稱
   dnsPolicy: ClusterFirst
   restartPolicy: Never
 status: {}
 ```
 >驗證
 ```gherkin=
-kubectl exec -it nginx -- env | grep val1 # nginx 為 pod 名稱
+kubectl exec -it nginx -- env # nginx 為 pod 名稱
 ```
->envFrom
+```
+root@nginx:/# env
+KUBERNETES_SERVICE_PORT_HTTPS=443
+KUBERNETES_SERVICE_PORT=443
+HOSTNAME=nginx
+PWD=/
+PKG_RELEASE=1~bookworm
+HOME=/root
+KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+NJS_VERSION=0.8.2
+TERM=xterm
+SHLVL=1
+KUBERNETES_PORT_443_TCP_PROTO=tcp
+KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+KUBERNETES_SERVICE_HOST=10.96.0.1
+KUBERNETES_PORT=tcp://10.96.0.1:443
+KUBERNETES_PORT_443_TCP_PORT=443
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+NGINX_VERSION=1.25.3
+value=val1 <----------------------
+_=/usr/bin/env
+```
+>envFrom(volume/configMap/pod-envFrom.yaml)
 ```gherkin=
 apiVersion: v1
 kind: Pod
@@ -401,16 +481,38 @@ spec:
     resources: {}
     envFrom: # different than previous one, that was 'env'
     - configMapRef: # different from the previous one, was 'configMapKeyRef'
-        name: mycmliterval # the name of the config map
+        name: mycmliteral # the name of the config map
   dnsPolicy: ClusterFirst
   restartPolicy: Never
 status: {}
 ```
 >驗證
 ```gherkin=
-kubectl exec -it nginx -- env | grep val1 # nginx 為 pod 名稱
+kubectl exec -it nginx -- env # nginx 為 pod 名稱
 ```
->volumes
+```
+KUBERNETES_SERVICE_PORT_HTTPS=443
+KUBERNETES_SERVICE_PORT=443
+var1=val1 <----------------------
+var2=val2 <----------------------
+HOSTNAME=nginx
+PWD=/
+PKG_RELEASE=1~bookworm
+HOME=/root
+KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+NJS_VERSION=0.8.2
+TERM=xterm
+SHLVL=1
+KUBERNETES_PORT_443_TCP_PROTO=tcp
+KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+KUBERNETES_SERVICE_HOST=10.96.0.1
+KUBERNETES_PORT=tcp://10.96.0.1:443
+KUBERNETES_PORT_443_TCP_PORT=443
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+NGINX_VERSION=1.25.3
+_=/usr/bin/env
+```
+>volumes(volume/configMap/pod-volumes.yaml)
 ```gherkin=
 apiVersion: v1
 kind: Pod
@@ -423,7 +525,7 @@ spec:
   volumes: # add a volumes list
   - name: myvolume # 後續 vloume mount 會用到
     configMap:
-      name: mycmliterval # config map 名稱
+      name: mycmliteral # config map 名稱
   containers:
   - image: nginx
     imagePullPolicy: IfNotPresent
@@ -438,12 +540,49 @@ status: {}
 ```
 >驗證
 ```gherkin=
-kubectl exec -it nginx -- cat /etc/lala/val1 # nginx 為 pod 名稱
+kubectl exec -it nginx -- cat /etc/lala/ 
+```
+```
+total 16
+drwxrwxrwx 3 root root 4096 Jan  4 15:41 .
+drwxr-xr-x 1 root root 4096 Jan  4 15:41 ..
+drwxr-xr-x 2 root root 4096 Jan  4 15:41 ..2024_01_04_15_41_29.233495579
+lrwxrwxrwx 1 root root   31 Jan  4 15:41 ..data -> ..2024_01_04_15_41_29.233495579
+lrwxrwxrwx 1 root root   11 Jan  4 15:41 var1 -> ..data/var1
+lrwxrwxrwx 1 root root   11 Jan  4 15:41 var2 -> ..data/var2
+```
+```gherkin=
+kubectl exec -it nginx -- cat /etc/lala/var1 # nginx 為 pod 名稱
+### 取得 val1
 ```
 
-## Secrets
-> 僅用md5編碼，結果依然不安全
-###  create --from-file 
+### Secrets
+> 僅用 base64 編碼，不算是真的加密，結果依然不安全
+#### 兩種產生方式 
+> 從參數寫入 --from-literval
+```gherkin=
+kubectl create secret generic secret-from-literal --from-literal=username=admin
+```
+> 查看內容
+```gherkin=
+kubectl get secrte secret-from-literal -o yaml
+```
+```
+apiVersion: v1
+data:
+  username: YWRtaW4=
+kind: Secret
+metadata:
+  creationTimestamp: "2024-01-05T01:47:47Z"
+  name: secret-from-literal
+  namespace: default
+  resourceVersion: "154332"
+  uid: 57476e5b-23f9-4d33-afa2-49b24e69bb9c
+type: Opaque
+```
+
+> 從檔案寫入 --from-file 
+
 ```gherkin=
 echo -n admin > username
 
@@ -451,10 +590,9 @@ kubectl create secret generic user-secret --from-file=username
 ```
 > 查看內容
 ```gherkin=
-kubectl edit secrte user-secret
+kubectl get secrte user-secret -o yaml
 ```
-
-```gherkin=
+```
 apiVersion: v1
 data:
   username: YWRtaW4= # 此為 admin 被 base64 encode 後的結果
@@ -469,23 +607,23 @@ type: Opaque
 ```
 > 驗證
 ```gherkin=
-kubectl get secret mysecret2 -o yaml
+kubectl get secret user-secret -o yaml
 
 echo -n YWRtaW4= | base64 -d # YWRtaW4= 為存在secret 裡面的值， decode 之後得到 admin
 ```
 > 其他驗證方法
 ```gherkin=
 # 用 --jsonpath
-kubectl get secret mysecret2 -o jsonpath='{.data.username}' | base64 -d  # on MAC it is -D
+kubectl get secret user-secret -o jsonpath='{.data.username}' | base64 -d  # on MAC it is -D
 
 # 用 --template
-kubectl get secret mysecret2 --template '{{.data.username}}' | base64 -d  # on MAC it is -D
+kubectl get secret user-secret --template '{{.data.username}}' | base64 -d  # on MAC it is -D
 
 # 用 jq
-kubectl get secret mysecret2 -o json | jq -r .data.username | base64 -d  # on MAC it is -D
+kubectl get secret user-secret -o json | jq -r .data.username | base64 -d  # on MAC it is -D
 
 ```
-### 以 volume 的方式取用 secret
+#### 以 volume 的方式取用 secret
 ```gherkin=
 apiVersion: v1
 kind: Pod
@@ -519,7 +657,8 @@ k exec pod/nginx -it -- cat /etc/foo/username
 #得到原內容 
 admin
 ```
-## Storage
+### emptyDir 
+> 可用於容器的資料暫存
 ```gherkin=
 apiVersion: v1
 kind: Pod
@@ -537,9 +676,44 @@ spec:
     emptyDir:
       sizeLimit: 500Mi
 ```
-### PV
+> 或同一Pod裡面的不同容器資料交換
+```gherkin=
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  volumes:
+    - name: html
+      emptyDir: {}
+  containers:
+  - image: nginx
+    name: nginx
+    volumeMounts:
+      - name: html
+        mountPath: /usr/share/nginx/html
+  - name: alpine
+    image: alpine
+    volumeMounts:
+      - name: html
+        mountPath: /html
+    command: [ "/bin/sh", "-c" ]
+    args:
+      - while true; do
+        echo $(hostname) $(date) >> /html/index.html;
+        sleep 10;
+        done
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+```
 
-### PVC
+
+
 
 
 ###### tags: `Kubernetes` `Documentation`
