@@ -1,0 +1,43 @@
+#  kubectl exec -it busybox -c busybox2 -- /bin/sh
+#  cat /etc/passwd | cut -f 1 -d ':' > /etc/foo/passwd 
+#  cat /etc/foo/passwd  
+#
+#  kubectl exec -it busybox -c busybox -- /bin/sh
+#  mount | grep foo # confirm the mounting
+#  cat /etc/foo/passwd
+#
+#
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: busybox
+  name: busybox
+spec:
+  containers:
+  - args:
+    - /bin/sh
+    - -c
+    - sleep 3600
+    image: busybox
+    name: busybox
+    resources: {}
+    volumeMounts: #
+    - name: myvolume #
+      mountPath: /etc/foo #
+  - args:
+    - /bin/sh
+    - -c
+    - sleep 3600
+    image: busybox
+    name: busybox2 # don't forget to change the name during copy paste, must be different from the first container's name!
+    volumeMounts: #
+    - name: myvolume #
+      mountPath: /etc/foo #
+  volumes: #
+  - name: myvolume #
+    emptyDir: {} #  
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  volumes: # add a volumes list
+  - name: myvolume # 後續 vloume mount 會用到
+    configMap:
+      name: mycmliteral # config map 名稱
+  containers:
+  - image: nginx
+    imagePullPolicy: IfNotPresent
+    name: nginx
+    resources: {}
+    volumeMounts: # your volume mounts are listed here
+    - name: myvolume # 前面 pod.spec.volumes.name 指定的名稱，此處為 myvolume
+      mountPath: /etc/lala # mount 進來的路徑
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
